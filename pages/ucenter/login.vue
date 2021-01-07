@@ -5,13 +5,17 @@
 				<!-- <image src="../../static/img/common/logo.jpg" mode="aspectFit" class="logoimg"></image> -->
 			</view>
 		</view>
-		<view class="content">
+		<view v-show="isLogin">
+			已经登录！  {{userId}}号驾驶员
+			<button @tap="logout">退出登录</button>
+		</view>
+		<view v-show="!isLogin" class="content">
 			<view class="has-mglr-10 ">
 				<view class=" has-mgtb-10 ">
 					<input type="number" maxlength="11" v-model="login.phone" placeholder="请输入手机号" class="is-input1 " @input="BindInput" data-val="phone" />
 				</view>
 				<view class=" has-radius has-mgtb-10">
-					<input v-model="login.password" placeholder="请输入登录密码" class="is-input1"  @input="BindInput" data-val="password"/>
+					<input type="password" v-model="login.password" placeholder="请输入登录密码" class="is-input1"  @input="BindInput" data-val="password"/>
 				</view>
 
 				<view class=" loginbtn has-radius has-mgtb-20">
@@ -28,9 +32,22 @@
 </template>
 
 <script>
+	import store from '@/store/index.js';//需要引入store
 	export default {
+		onShow() {
+			console.log("onshow");
+			console.log(store.state.isloginStatus)
+			if(store.state.isloginStatus) {
+				this.isLogin = true;
+				this.userId = store.state.userId;
+			} else {
+				this.isLogin = false;
+			}
+		},
 		data() {
 			return {
+				userId: 0,
+				isLogin: false,
 				login: {
 					loading: false,
 					phone:"",
@@ -45,11 +62,43 @@
 				setTimeout((e=>{
 					this.login.loading = false;
 				}),1500);
-				console.log(JSON.stringify(this.login)); 
+				console.log(JSON.stringify(this.login));
+				uni.request({
+					url: "http://mrbus.net/api/driver/login",
+					method: "POST",
+					header: {
+						"Content-Type": "application/json"
+					},
+					data: {
+						"phone_number": this.login.phone,
+						"password": this.login.password
+					},
+					success: res => {
+						console.log(res.data);
+						if(res.data.status_code===200) {
+							store.commit("login",res.data.data)
+						}
+						uni.switchTab({
+							url:"../home/home"
+						})
+					}
+				});
 			},
 			BindInput:function(e){
 				var dataval = e.currentTarget.dataset.val;
 				this.login[dataval] = e.detail.value; 
+			},
+			logout:function(){
+				store.commit("clear");
+				try {
+				    uni.clearStorageSync();
+				} catch (e) {
+				    // error
+				}
+				uni.switchTab({
+					url:"../home/home"
+				})
+				// uni.refresh();
 			}
 		}
 	}
